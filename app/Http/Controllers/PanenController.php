@@ -2,38 +2,80 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\HasilPanen;
+use App\Http\Requests\StoreHasilPanenRequest;
+use App\Http\Resources\HasilPanenResource;
+use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class PanenController extends Controller
 {
-    public function index()
+    // GET ALL + Filtering & Pagination
+    public function index(Request $request)
     {
-        // Mengambil seluruh data dari tabel hasil_panens
-        $dataPanen = HasilPanen::all();
+        $query = HasilPanen::query();
 
-        // Mengirim data ke View
-        return view('panen.index', compact('dataPanen'));
+        if ($request->has('commodity')) {
+            $query->where('nama_komoditas', 'like', '%' . $request->commodity . '%');
+        }
+
+        $harvests = $query->paginate(10);
+        return HasilPanenResource::collection($harvests);
     }
 
-    public function create()
+    // POST - Create
+    public function store(StoreHasilPanenRequest $request)
     {
-        return view('panen.create');
+        $harvest = HasilPanen::create($request->validated());
+        return (new HasilPanenResource($harvest))
+            ->additional(['message' => 'Data panen berhasil dicatat'])
+            ->response()
+            ->setStatusCode(201);
     }
 
-    public function store(Request $request)
+    // GET BY ID
+    public function show($id)
     {
-        $request->validate([
-            'nama_komoditas' => 'required',
-            'jumlah_kg' => 'required|numeric',
-        ]);
+        try {
+            $harvest = HasilPanen::findOrFail($id);
+            return new HasilPanenResource($harvest);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'Resource tidak ditemukan',
+                'message' => 'Data panen dengan ID ' . $id . ' tidak ada.',
+            ], 404);
+        }
+    }
 
-        HasilPanen::create([
-            'nama_komoditas' => $request->nama_komoditas,
-            'jumlah_kg' => $request->jumlah_kg,
-            'tanggal_panen' => $request->tanggal_panen,
-        ]);
+    // PUT/PATCH - Update
+    public function update(StoreHasilPanenRequest $request, $id)
+    {
+        try {
+            $panen = HasilPanen::findOrFail($id);
+            $panen->update($request->validated());
+            return new HasilPanenResource($panen);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'Resource tidak ditemukan',
+                'message' => 'Data panen dengan ID ' . $id . ' tidak ada.',
+            ], 404);
+        }
+    }
 
-        return redirect('/data-panen');
+    // DELETE
+    public function destroy($id)
+    {
+        try {
+            $panen = HasilPanen::findOrFail($id);
+            $panen->delete();
+            return response()->json([
+                'message' => 'Data panen berhasil dihapus',
+            ], 200);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'Resource tidak ditemukan',
+                'message' => 'Data panen dengan ID ' . $id . ' tidak ada.',
+            ], 404);
+        }
     }
 }
