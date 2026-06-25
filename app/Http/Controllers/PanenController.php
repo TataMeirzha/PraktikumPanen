@@ -15,23 +15,33 @@ class PanenController extends Controller
     {
         $query = HasilPanen::query();
 
+        // Filter nama komoditas
         if ($request->has('commodity')) {
             $query->where('nama_komoditas', 'like', '%' . $request->commodity . '%');
+        }
+
+        // Filter rentang tanggal
+        if ($request->has('start_date')) {
+            $query->whereDate('tanggal_panen', '>=', $request->start_date);
+        }
+
+        if ($request->has('end_date')) {
+            $query->whereDate('tanggal_panen', '<=', $request->end_date);
         }
 
         $harvests = $query->paginate(10);
         return HasilPanenResource::collection($harvests);
     }
 
-    // POST - Create
-    public function store(StoreHasilPanenRequest $request)
-    {
-        $harvest = HasilPanen::create($request->validated());
-        return (new HasilPanenResource($harvest))
-            ->additional(['message' => 'Data panen berhasil dicatat'])
-            ->response()
-            ->setStatusCode(201);
-    }
+        // POST - Create
+        public function store(StoreHasilPanenRequest $request)
+        {
+            $harvest = HasilPanen::create($request->validated());
+            return (new HasilPanenResource($harvest))
+                ->additional(['message' => 'Data panen berhasil dicatat'])
+                ->response()
+                ->setStatusCode(201);
+        }
 
     // GET BY ID
     public function show($id)
